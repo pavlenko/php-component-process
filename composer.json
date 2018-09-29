@@ -1,0 +1,35 @@
+{
+    "config": {
+        "sort-packages": true
+    },
+    "name": "pe/component-process",
+    "description": "Process management based on ext-pcntl and ext-posix",
+    "keywords": ["pcntl", "posix"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Eugene Pavlenko",
+            "email": "pavlenko.obs@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.0"
+    },
+    "require-dev": {},
+    "suggest": {},
+    "autoload": {
+        "psr-4": {
+            "PE\\Component\\Process\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PETest\\Component\\Process\\": "tests/"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0-dev"
+        }
+    }
+}
