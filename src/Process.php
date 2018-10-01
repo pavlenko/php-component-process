@@ -2,52 +2,90 @@
 
 namespace PE\Component\Process;
 
-class Process implements ProcessInterface
+class Process
 {
-    /**
-     * @var array
-     */
-    private $handlers;
+    use TitleTrait;
 
     /**
-     * @var \SplQueue
+     * @var callable
      */
-    private $queue;
+    private $callable;
 
     /**
-     * Signals constructor.
+     * @var Signals
      */
-    public function __construct()
+    private $signals;
+
+    /**
+     * @var int
+     */
+    private $pid = 0;
+
+    /**
+     * @var string
+     */
+    private $alias;
+
+    /**
+     * @param callable $callable
+     */
+    public function __construct(callable $callable)
     {
-        $this->handlers = [];
-
-        $this->queue = new \SplQueue();
-        $this->queue->setIteratorMode(\SplQueue::IT_MODE_DELETE);
+        $this->callable = $callable;
+        $this->signals  = new Signals();
     }
 
-    public function fork()
+    /**
+     * @inheritDoc
+     */
+    public function getPID()
     {
-        // TODO: Implement fork() method.
-    }
-
-    public function kill()
-    {
-        // TODO: Implement kill() method.
+        return $this->pid;
     }
 
     /**
-     * @return $this
+     * @inheritDoc
      */
-    public function dispatch()
+    public function setPID($pid)
     {
-        pcntl_signal_dispatch();
+        $this->pid = $pid;
+        return $this;
+    }
 
-        foreach ($this->queue as $signal) {
-            foreach ($this->handlers[$signal] as $callable) {
-                $callable($signal);
-            }
-        }
+    /**
+     * @return string
+     */
+    public function getAlias()
+    {
+        return $this->alias;
+    }
 
+    /**
+     * @param string $alias
+     *
+     * @return self
+     */
+    public function setAlias($alias)
+    {
+        $this->alias = $alias;
+        return $this;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function run()
+    {
+        $callable = $this->callable;
+        $callable($this);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function kill($signal = SIGTERM)
+    {
+        posix_kill($this->pid, $signal);
         return $this;
     }
 }

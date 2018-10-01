@@ -15,7 +15,11 @@
     "require": {
         "php": ">=7.0"
     },
-    "require-dev": {},
+    "require-dev": {
+        "misterion/ko-process": "^0.5.3",
+        "phpunit/phpunit": "~6.0",
+        "php-mock/php-mock-phpunit": "^2.1"
+    },
     "suggest": {},
     "autoload": {
         "psr-4": {
