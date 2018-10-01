@@ -8,11 +8,6 @@ class Manager
     use TitleTrait;
 
     /**
-     * @var string
-     */
-    private $pidFile;
-
-    /**
      * @var Signals
      */
     private $signals;
@@ -52,10 +47,8 @@ class Manager
      */
     private $terminateReason;
 
-    public function __construct($pidFile = null)
+    public function __construct()
     {
-        $this->pidFile = $pidFile;
-
         $this->signals = new Signals();
         $this->signals->registerHandler(SIGCHLD, function () { $this->handleChildShutdown(); });
         $this->signals->registerHandler(SIGTERM, function () { $this->handleParentShutdown(); });
@@ -71,27 +64,11 @@ class Manager
     }
 
     /**
-     * Re-set start time to current time
-     */
-    public function resetStartTime()
-    {
-        $this->startTime = microtime(true);
-    }
-
-    /**
      * @param int $maxExecutedProcesses
      */
     public function setMaxExecutedProcesses($maxExecutedProcesses)
     {
         $this->maxExecutedProcesses = (int) $maxExecutedProcesses;
-    }
-
-    /**
-     * Re-set executions
-     */
-    public function resetExecutions()
-    {
-        $this->executions = 0;
     }
 
     /**
@@ -202,47 +179,6 @@ class Manager
                 ->run();
             exit(0);
         }
-    }
-
-    /**
-     * Demonize manager
-     */
-    public function runAsDaemon()
-    {
-        if (!$this->pidFile) {
-            throw new \RuntimeException('Cannot demonize process without define pid file path');
-        }
-
-        $pid = pcntl_fork();
-
-        if (-1 === $pid) {
-            // Error fork
-            throw new \RuntimeException('Failure on pcntl_fork');
-        }
-
-        if ($pid) {
-            // Parent code
-            if (!mkdir($dir = pathinfo($this->pidFile, PATHINFO_DIRNAME), 0777, true) && !is_dir($dir)) {
-                throw new \RuntimeException(sprintf('Directory "%s" was not created', $dir));
-            }
-
-            file_put_contents($this->pidFile, $pid);
-            exit(0);
-        }
-
-        // Child code
-        return $this;
-    }
-
-    /**
-     * Kill demonized manager
-     *
-     * @param int $signal
-     */
-    public function kill($signal = SIGTERM)
-    {
-        $pid = file_get_contents($this->pidFile);
-        posix_kill($pid, $signal);
     }
 
     /**
