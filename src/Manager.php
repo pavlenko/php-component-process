@@ -4,7 +4,6 @@ namespace PE\Component\Process;
 
 class Manager
 {
-    use EventsTrait;
     use TitleTrait;
 
     /**
@@ -166,19 +165,22 @@ class Manager
         if (-1 === $pid) {
             // Error fork
             throw new \RuntimeException('Failure on pcntl_fork');
-        } else if ($pid) {
+        }
+
+        if ($pid) {
             // Parent code
             $this->children[$pid] = $process;
 
-            $process
-                ->setPID($pid);
-        } else {
-            // Child code
-            $process
-                ->setPID(getmypid())
-                ->run();
-            exit(0);
+            $process->setPID($pid);
+            return;
         }
+
+        // Child code
+        $process
+            ->setPID(getmypid())
+            ->run();
+
+        exit(0);
     }
 
     /**
