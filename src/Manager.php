@@ -144,6 +144,8 @@ class Manager
      * @param callable $callable
      *
      * @return Process
+     *
+     * @TODO pass Process instance instead of callable to allow use it in unit tests
      */
     public function fork(callable $callable)
     {
@@ -179,8 +181,6 @@ class Manager
         $process
             ->setPID(getmypid())
             ->run();
-
-        exit(0);
     }
 
     /**

@@ -12,12 +12,40 @@ class ManagerTest extends TestCase
 
     /**
      * @runInSeparateProcess
+     *
+     * @expectedException \RuntimeException
      */
-    public function testFork()
+    public function testForkFailed()
     {
         $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
             ->expects($this->once())
-            ->willReturn(1);
+            ->willReturn(-1);
+
+        (new Manager())->fork(function(){});
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testForkParent()
+    {
+        $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
+            ->expects($this->once())
+            ->willReturn(1000);
+
+        $process = (new Manager())->fork(function(){});
+
+        static::assertEquals(1000, $process->getPID());
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testForkChild()
+    {
+        $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
+            ->expects($this->once())
+            ->willReturn(0);
 
         (new Manager())->fork(function(){});
     }
