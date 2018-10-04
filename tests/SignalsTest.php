@@ -11,32 +11,29 @@ class SignalsTest extends TestCase
     use PHPMock;
 
     /**
-     * @var Signals
+     * @runInSeparateProcess
      */
-    private $signals;
-
-    protected function setUp()
-    {
-        $this->signals = new Signals();
-    }
-
     public function testDispatch()
     {
         $this->getFunctionMock('PE\\Component\\Process', 'pcntl_signal_dispatch')
             ->expects($this->once());
 
-        $this->signals->dispatch();
+        (new Signals())->dispatch();
     }
 
     /**
+     * @runInSeparateProcess
+     *
      * @expectedException \InvalidArgumentException
      */
     public function testRegisterInvalidHandler()
     {
-        $this->signals->registerHandler(1, new \stdClass());
+        (new Signals())->registerHandler(1, new \stdClass());
     }
 
     /**
+     * @runInSeparateProcess
+     *
      * @expectedException \RuntimeException
      */
     public function testRegisterHandlerEmulatePCNTLError()
@@ -45,18 +42,24 @@ class SignalsTest extends TestCase
             ->expects($this->once())
             ->willReturn(false);
 
-        $this->signals->registerHandler(1, function(){});
+        (new Signals())->registerHandler(1, function(){});
     }
 
+    /**
+     * @runInSeparateProcess
+     */
     public function testRegisterHandler()
     {
         $this->getFunctionMock('PE\\Component\\Process', 'pcntl_signal')
             ->expects($this->once())
             ->willReturn(true);
 
-        $this->signals->registerHandler(1, function(){});
+        (new Signals())->registerHandler(1, function(){});
     }
 
+    /**
+     * @runInSeparateProcess
+     */
     public function testDispatchRegisteredHandler()
     {
         $this->getFunctionMock('PE\\Component\\Process', 'pcntl_signal')
@@ -71,10 +74,11 @@ class SignalsTest extends TestCase
 
         $dispatched = false;
 
-        $this->signals->registerHandler(1, function () use (&$dispatched) {
+        $signals = new Signals();
+        $signals->registerHandler(1, function () use (&$dispatched) {
             $dispatched = true;
         });
 
-        $this->signals->dispatch();
+        $signals->dispatch();
     }
 }
