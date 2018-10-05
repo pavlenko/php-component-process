@@ -179,22 +179,14 @@ class Manager
     /**
      * Get active children count
      *
+     * @param string $alias
+     *
      * @return int
      */
-    public function countChildren(): int
-    {
-        return \count($this->children);
-    }
-
-    /**
-     * @param string
-     *
-     * @return  int
-     */
-    public function countChildrenByAlias($alias): int
+    public function countChildren(string $alias = null): int
     {
         $children = array_filter($this->children, function (Process $process) use ($alias) {
-            return $process->getAlias() === $alias;
+            return !$alias || $process->getAlias() === $alias;
         });
 
         return \count($children);
