@@ -16,7 +16,7 @@ class SignalsTest extends TestCase
     public function testDispatch()
     {
         $this->getFunctionMock('PE\\Component\\Process', 'pcntl_signal_dispatch')
-            ->expects($this->once());
+            ->expects(static::once());
 
         (new Signals())->dispatch();
     }
@@ -39,7 +39,7 @@ class SignalsTest extends TestCase
     public function testRegisterHandlerEmulatePCNTLError()
     {
         $this->getFunctionMock('PE\\Component\\Process', 'pcntl_signal')
-            ->expects($this->once())
+            ->expects(static::once())
             ->willReturn(false);
 
         (new Signals())->registerHandler(1, function(){});
@@ -51,7 +51,7 @@ class SignalsTest extends TestCase
     public function testRegisterHandler()
     {
         $this->getFunctionMock('PE\\Component\\Process', 'pcntl_signal')
-            ->expects($this->once())
+            ->expects(static::once())
             ->willReturn(true);
 
         (new Signals())->registerHandler(1, function(){});
@@ -63,14 +63,14 @@ class SignalsTest extends TestCase
     public function testDispatchRegisteredHandler()
     {
         $this->getFunctionMock('PE\\Component\\Process', 'pcntl_signal')
-            ->expects($this->once())
+            ->expects(static::once())
             ->willReturnCallback(function ($signal, $callable) {
                 $callable($signal);
                 return true;
             });
 
         $this->getFunctionMock('PE\\Component\\Process', 'pcntl_signal_dispatch')
-            ->expects($this->once());
+            ->expects(static::once());
 
         $dispatched = false;
 

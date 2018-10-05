@@ -46,9 +46,12 @@ class Manager
      */
     private $terminateReason;
 
-    public function __construct()
+    /**
+     * @param Signals $signals
+     */
+    public function __construct(Signals $signals)
     {
-        $this->signals = new Signals();
+        $this->signals = $signals;
         $this->signals->registerHandler(SIGCHLD, function () { $this->handleChildShutdown(); });
         $this->signals->registerHandler(SIGTERM, function () { $this->handleParentShutdown(); });
         $this->signals->registerHandler(SIGINT, function () { $this->handleParentShutdown(); });
@@ -127,38 +130,9 @@ class Manager
     }
 
     /**
-     * Internal create process
-     *
-     * @param callable $callable
-     *
-     * @return Process
-     */
-    private function createProcess(callable $callable)
-    {
-        return new Process($callable);
-    }
-
-    /**
-     * Create process fork from callable
-     *
-     * @param callable $callable
-     *
-     * @return Process
-     *
-     * @TODO pass Process instance instead of callable to allow use it in unit tests
-     */
-    public function fork(callable $callable)
-    {
-        $this->internalFork($process = $this->createProcess($callable));
-        return $process;
-    }
-
-    /**
-     * Create new process fork
-     *
      * @param Process $process
      */
-    private function internalFork(Process $process)
+    public function fork(Process $process)
     {
         $this->executions++;
 

@@ -114,4 +114,8 @@ if (!extension_loaded('pcntl')) {
     define('PCNTL_ENOEXEC', 8);
     define('PCNTL_ENOTDIR', 20);
     define('PCNTL_ETXTBSY', 26);
+
+    //function pcntl_fork () {}
+    //function pcntl_signal ($signo, $handler, $restart_syscalls = true) {}
+    //function pcntl_signal_dispatch () {}
 }
