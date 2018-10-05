@@ -6,31 +6,11 @@ use PE\Component\Process\Manager;
 use PE\Component\Process\Process;
 use PE\Component\Process\Signals;
 use phpmock\phpunit\PHPMock;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 class ManagerTest extends TestCase
 {
     use PHPMock;
-
-    /**
-     * @var Signals|MockObject
-     */
-    private $signals;
-
-    /**
-     * @var Manager
-     */
-    private $manager;
-
-    /**
-     * @inheritDoc
-     */
-    protected function setUp()
-    {
-        $this->signals = $this->createMock(Signals::class);
-        $this->manager = new Manager($this->signals);
-    }
 
     /**
      * @runInSeparateProcess
@@ -39,11 +19,14 @@ class ManagerTest extends TestCase
      */
     public function testForkFailed()
     {
+        $signals = $this->createMock(Signals::class);
+        $manager = new Manager($signals);
+
         $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
             ->expects(static::once())
             ->willReturn(-1);
 
-        $this->manager->fork(new Process(function(){}));
+        $manager->fork(new Process(function(){}));
     }
 
     /**
@@ -51,11 +34,14 @@ class ManagerTest extends TestCase
      */
     public function testForkParent()
     {
+        $signals = $this->createMock(Signals::class);
+        $manager = new Manager($signals);
+
         $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
             ->expects(static::once())
             ->willReturn(1000);
 
-        $this->manager->fork($process = new Process(function(){}));
+        $manager->fork($process = new Process(function(){}));
 
         static::assertEquals(1000, $process->getPID());
     }
@@ -65,11 +51,14 @@ class ManagerTest extends TestCase
      */
     public function testForkChild()
     {
+        $signals = $this->createMock(Signals::class);
+        $manager = new Manager($signals);
+
         $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
             ->expects(static::once())
             ->willReturn(0);
 
-        $this->manager->fork(new Process(function(){}));
+        $manager->fork(new Process(function(){}));
     }
 
     /**
@@ -77,10 +66,13 @@ class ManagerTest extends TestCase
      */
     public function testWaitNoChildren()
     {
-        $this->signals->expects(static::never())
+        $signals = $this->createMock(Signals::class);
+        $manager = new Manager($signals);
+
+        $signals->expects(static::never())
             ->method('dispatch');
 
-        $this->manager->wait();
+        $manager->wait();
     }
 
     /**
@@ -89,25 +81,37 @@ class ManagerTest extends TestCase
     public function testWaitChildren()
     {
         $this->getFunctionMock('PE\\Component\\Process', 'pcntl_signal')
-            ->expects(static::once())
+            ->expects(static::atLeastOnce())
             ->willReturnCallback(function ($signal, $callable) {
                 $callable($signal);
                 return true;
             });
 
+        $this->getFunctionMock('PE\\Component\\Process', 'pcntl_signal_dispatch')
+            ->expects(static::atLeastOnce());
+
         $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
             ->expects(static::once())
             ->willReturn(1000);
 
+        $waitPID = 1000;
         $this->getFunctionMock('PE\\Component\\Process', 'pcntl_waitpid')
-            ->expects(static::once())
-            ->willReturn(1000);
+            ->expects(static::atLeastOnce())
+            ->willReturnCallback(function () use (&$waitPID) {
+                $return  = $waitPID;
+                $waitPID = 0;
+                return $return;
+            });
 
         $manager = new Manager(new Signals());
 
-        $this->manager->fork(new Process(function(){}));
+        $manager->fork(new Process(function(){}));
+
+        static::assertEquals(1, $manager->countChildren());
 
         $manager->wait();
+
+        static::assertEquals(0, $manager->countChildren());
     }
 
     /**
@@ -115,10 +119,13 @@ class ManagerTest extends TestCase
      */
     public function testDispatch()
     {
-        $this->signals->expects(static::once())
+        $signals = $this->createMock(Signals::class);
+        $manager = new Manager($signals);
+
+        $signals->expects(static::once())
             ->method('dispatch');
 
-        $this->manager->dispatch();
+        $manager->dispatch();
     }
 
     /**
@@ -126,7 +133,10 @@ class ManagerTest extends TestCase
      */
     public function testCountChildren()
     {
-        static::assertEquals(0, $this->manager->countChildren());
+        $signals = $this->createMock(Signals::class);
+        $manager = new Manager($signals);
+
+        static::assertEquals(0, $manager->countChildren());
 
         $pid = 1000;
 
@@ -136,10 +146,10 @@ class ManagerTest extends TestCase
                 return $pid++;
             });
 
-        $this->manager->fork((new Process(function(){}))->setAlias('foo'));
-        $this->manager->fork((new Process(function(){}))->setAlias('bar'));
+        $manager->fork((new Process(function(){}))->setAlias('foo'));
+        $manager->fork((new Process(function(){}))->setAlias('bar'));
 
-        static::assertEquals(2, $this->manager->countChildren());
-        static::assertEquals(1, $this->manager->countChildren('foo'));
+        static::assertEquals(2, $manager->countChildren());
+        static::assertEquals(1, $manager->countChildren('foo'));
     }
 }
