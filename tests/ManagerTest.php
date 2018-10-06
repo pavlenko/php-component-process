@@ -152,4 +152,56 @@ class ManagerTest extends TestCase
         static::assertEquals(2, $manager->countChildren());
         static::assertEquals(1, $manager->countChildren('foo'));
     }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testGetTerminateReasonWithoutExecution()
+    {
+        $signals = $this->createMock(Signals::class);
+        $manager = new Manager($signals);
+
+        static::assertFalse($manager->isShouldTerminate());
+        static::assertEmpty($manager->getTerminateReason());
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testShouldTerminateByExecutions()
+    {
+        $signals = $this->createMock(Signals::class);
+        $manager = new Manager($signals);
+        $manager->setMaxExecutedProcesses(1);
+
+        $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
+            ->expects(static::atLeastOnce())
+            ->willReturn(1000);
+
+        $manager->fork(new Process(function(){}));
+
+        static::assertTrue($manager->isShouldTerminate());
+        static::assertNotEmpty($manager->getTerminateReason());
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testShouldTerminateByTime()
+    {
+        $signals = $this->createMock(Signals::class);
+        $manager = new Manager($signals);
+        $manager->setMaxLifeTime(1);
+
+        $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
+            ->expects(static::atLeastOnce())
+            ->willReturn(1000);
+
+        $manager->fork(new Process(function(){}));
+
+        sleep(2);
+
+        static::assertTrue($manager->isShouldTerminate());
+        static::assertNotEmpty($manager->getTerminateReason());
+    }
 }

@@ -2,6 +2,9 @@
 
 namespace PE\Component\Process;
 
+/**
+ * @codeCoverageIgnore
+ */
 trait TitleTrait
 {
     /**
@@ -25,7 +28,7 @@ trait TitleTrait
      */
     public function getProcessTitle()
     {
-        if (\function_exists('cli_set_process_title') && PHP_OS !== 'Darwin') {
+        if (\function_exists('cli_get_process_title') && PHP_OS !== 'Darwin') {
             return cli_get_process_title(); //PHP >= 5.5.
         }
 

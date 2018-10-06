@@ -2,6 +2,7 @@
 
 namespace PE\Component\Process;
 
+//TODO create method to allow trigger handlers manually
 class Signals
 {
     /**
