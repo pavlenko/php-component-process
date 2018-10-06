@@ -109,6 +109,7 @@ class Manager
      */
     private function handleChildShutdown()
     {
+        $status = null;
         while (($pid = pcntl_waitpid(-1, $status, WNOHANG)) > 0) {
             if (isset($this->children[$pid])) {
                 unset($this->children[$pid]);

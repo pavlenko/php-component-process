@@ -76,7 +76,7 @@ class ManagerTest extends TestCase
     }
 
     /**
-     * @runInSeparateProcess
+     * @-runInSeparateProcess
      */
     public function testWaitChildren()
     {
