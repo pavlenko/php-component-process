@@ -3,75 +3,63 @@
 namespace PETest\Component\Process;
 
 use PE\Component\Process\Manager;
+use PE\Component\Process\POSIX;
 use PE\Component\Process\Process;
-use PE\Component\Process\Signals;
-use phpmock\phpunit\PHPMock;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 class ManagerTest extends TestCase
 {
-    use PHPMock;
-
-    /**
-     * @runInSeparateProcess
-     *
-     * @expectedException \RuntimeException
-     */
     public function testForkFailed()
     {
-        $signals = $this->createMock(Signals::class);
-        $manager = new Manager($signals);
+        $this->expectException(\RuntimeException::class);
 
-        $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
-            ->expects(static::once())
-            ->willReturn(-1);
+        /* @var $posix POSIX|MockObject */
+        $posix = $this->createMock(POSIX::class);
+        $posix->expects(static::once())->method('fork')->willReturn(-1);
 
+        POSIX::setInstance($posix);
+
+        $manager = new Manager();
         $manager->fork(new Process(function(){}));
     }
 
-    /**
-     * @runInSeparateProcess
-     */
     public function testForkParent()
     {
-        $signals = $this->createMock(Signals::class);
-        $manager = new Manager($signals);
+        /* @var $posix POSIX|MockObject */
+        $posix = $this->createMock(POSIX::class);
+        $posix->expects(static::once())->method('fork')->willReturn(1000);
 
-        $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
-            ->expects(static::once())
-            ->willReturn(1000);
+        POSIX::setInstance($posix);
 
+        $manager = new Manager();
         $manager->fork($process = new Process(function(){}));
 
         static::assertEquals(1000, $process->getPID());
     }
 
-    /**
-     * @runInSeparateProcess
-     */
     public function testForkChild()
     {
-        $signals = $this->createMock(Signals::class);
-        $manager = new Manager($signals);
+        /* @var $posix POSIX|MockObject */
+        $posix = $this->createMock(POSIX::class);
+        $posix->expects(static::once())->method('fork')->willReturn(0);
+        $posix->expects(static::once())->method('getMyPID');
 
-        $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
-            ->expects(static::once())
-            ->willReturn(0);
+        POSIX::setInstance($posix);
 
+        $manager = new Manager();
         $manager->fork(new Process(function(){}));
     }
 
-    /**
-     * @runInSeparateProcess
-     */
     public function testWaitNoChildren()
     {
-        $signals = $this->createMock(Signals::class);
-        $manager = new Manager($signals);
+        /* @var $posix POSIX|MockObject */
+        $posix = $this->createMock(POSIX::class);
+        $posix->expects(static::never())->method('dispatchSignals');
 
-        $signals->expects(static::never())
-            ->method('dispatch');
+        POSIX::setInstance($posix);
 
+        $manager = new Manager();
         $manager->wait();
     }
 
@@ -80,31 +68,31 @@ class ManagerTest extends TestCase
      */
     public function testWaitChildren()
     {
-        $this->getFunctionMock('PE\\Component\\Process', 'pcntl_signal')
-            ->expects(static::atLeastOnce())
-            ->willReturnCallback(function ($signal, $callable) {
-                $callable($signal);
-                return true;
-            });
+        /* @var $posix POSIX|MockObject */
+        $posix = $this->getMockBuilder(POSIX::class)
+            ->disableOriginalConstructor()
+            ->setMethods(['fork', 'signalRegister', 'signalDispatch', 'waitPID'])
+            ->getMock();
 
-        $this->getFunctionMock('PE\\Component\\Process', 'pcntl_signal_dispatch')
-            ->expects(static::atLeastOnce());
+        $posix->expects(static::atLeastOnce())->method('fork')->willReturn(1000);
 
-        $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
-            ->expects(static::once())
-            ->willReturn(1000);
+        $posix->expects(static::atLeastOnce())->method('signalRegister')->willReturnCallback(function ($signal, $callable) {
+            $callable($signal);
+            return true;
+        });
+
+        $posix->expects(static::atLeastOnce())->method('signalDispatch');
 
         $waitPID = 1000;
-        $this->getFunctionMock('PE\\Component\\Process', 'pcntl_waitpid')
-            ->expects(static::atLeastOnce())
-            ->willReturnCallback(function () use (&$waitPID) {
-                $return  = $waitPID;
-                $waitPID = 0;
-                return $return;
-            });
+        $posix->expects(static::atLeastOnce())->method('waitPID')->willReturnCallback(function () use (&$waitPID) {
+            $return  = $waitPID;
+            $waitPID = 0;
+            return $return;
+        });
 
-        $manager = new Manager(new Signals());
+        POSIX::setInstance($posix);
 
+        $manager = new Manager();
         $manager->fork(new Process(function(){}));
 
         static::assertEquals(1, $manager->countChildren());
@@ -114,37 +102,37 @@ class ManagerTest extends TestCase
         static::assertEquals(0, $manager->countChildren());
     }
 
-    /**
-     * @runInSeparateProcess
-     */
     public function testDispatch()
     {
-        $signals = $this->createMock(Signals::class);
-        $manager = new Manager($signals);
+        /* @var $posix POSIX|MockObject */
+        $posix = $this->createMock(POSIX::class);
+        $posix->expects(static::once())->method('dispatchSignals');
 
-        $signals->expects(static::once())
-            ->method('dispatch');
+        POSIX::setInstance($posix);
 
+        $manager = new Manager();
         $manager->dispatch();
     }
 
-    /**
-     * @runInSeparateProcess
-     */
     public function testCountChildren()
     {
-        $signals = $this->createMock(Signals::class);
-        $manager = new Manager($signals);
-
-        static::assertEquals(0, $manager->countChildren());
+        /* @var $posix POSIX|MockObject */
+        $posix = $this->createMock(POSIX::class);
 
         $pid = 1000;
 
-        $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
+        $posix
             ->expects(static::atLeastOnce())
+            ->method('fork')
             ->willReturnCallback(function() use (&$pid) {
                 return $pid++;
             });
+
+        POSIX::setInstance($posix);
+
+        $manager = new Manager();
+
+        static::assertEquals(0, $manager->countChildren());
 
         $manager->fork((new Process(function(){}))->setAlias('foo'));
         $manager->fork((new Process(function(){}))->setAlias('bar'));
@@ -153,50 +141,45 @@ class ManagerTest extends TestCase
         static::assertEquals(1, $manager->countChildren('foo'));
     }
 
-    /**
-     * @runInSeparateProcess
-     */
     public function testGetTerminateReasonWithoutExecution()
     {
-        $signals = $this->createMock(Signals::class);
-        $manager = new Manager($signals);
+        /* @var $posix POSIX|MockObject */
+        $posix = $this->createMock(POSIX::class);
+
+        POSIX::setInstance($posix);
+
+        $manager = new Manager();
 
         static::assertFalse($manager->isShouldTerminate());
         static::assertEmpty($manager->getTerminateReason());
     }
 
-    /**
-     * @runInSeparateProcess
-     */
     public function testShouldTerminateByExecutions()
     {
-        $signals = $this->createMock(Signals::class);
-        $manager = new Manager($signals);
+        /* @var $posix POSIX|MockObject */
+        $posix = $this->createMock(POSIX::class);
+        $posix->expects(static::once())->method('fork')->willReturn(1000);
+
+        POSIX::setInstance($posix);
+
+        $manager = new Manager();
         $manager->setMaxExecutedProcesses(1);
-
-        $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
-            ->expects(static::atLeastOnce())
-            ->willReturn(1000);
-
         $manager->fork(new Process(function(){}));
 
         static::assertTrue($manager->isShouldTerminate());
         static::assertNotEmpty($manager->getTerminateReason());
     }
 
-    /**
-     * @runInSeparateProcess
-     */
     public function testShouldTerminateByTime()
     {
-        $signals = $this->createMock(Signals::class);
-        $manager = new Manager($signals);
+        /* @var $posix POSIX|MockObject */
+        $posix = $this->createMock(POSIX::class);
+        $posix->expects(static::once())->method('fork')->willReturn(1000);
+
+        POSIX::setInstance($posix);
+
+        $manager = new Manager();
         $manager->setMaxLifeTime(1);
-
-        $this->getFunctionMock('PE\\Component\\Process', 'pcntl_fork')
-            ->expects(static::atLeastOnce())
-            ->willReturn(1000);
-
         $manager->fork(new Process(function(){}));
 
         sleep(2);

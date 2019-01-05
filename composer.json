@@ -17,8 +17,6 @@
     },
     "require-dev": {
         "misterion/ko-process": "^0.5.3",
-        "php-mock/php-mock": "^2.0",
-        "php-mock/php-mock-phpunit": "^2.1",
         "phpunit/phpunit": "~6.0"
     },
     "suggest": {},

@@ -7,11 +7,6 @@ class Manager
     use TitleTrait;
 
     /**
-     * @var Signals
-     */
-    private $signals;
-
-    /**
      * @var Process[]
      */
     private $children = [];
@@ -44,17 +39,14 @@ class Manager
     /**
      * @var string
      */
-    private $terminateReason;
+    private $terminateReason = '';
 
-    /**
-     * @param Signals $signals
-     */
-    public function __construct(Signals $signals)
+    public function __construct()
     {
-        $this->signals = $signals;
-        $this->signals->registerHandler(SIGCHLD, function () { $this->handleChildShutdown(); });
-        $this->signals->registerHandler(SIGTERM, function () { $this->handleParentShutdown(); });
-        $this->signals->registerHandler(SIGINT, function () { $this->handleParentShutdown(); });
+        $posix = POSIX::getInstance();
+        $posix->registerSignalHandler(POSIX::SIGCHLD, function () { $this->handleChildShutdown(); });
+        $posix->registerSignalHandler(POSIX::SIGTERM, function () { $this->handleParentShutdown(); });
+        $posix->registerSignalHandler(POSIX::SIGINT, function () { $this->handleParentShutdown(); });
     }
 
     /**
@@ -76,7 +68,7 @@ class Manager
     /**
      * @return string
      */
-    public function getTerminateReason()
+    public function getTerminateReason(): string
     {
         return $this->terminateReason;
     }
@@ -110,7 +102,7 @@ class Manager
     private function handleChildShutdown()
     {
         $status = null;
-        while (($pid = pcntl_waitpid(-1, $status, WNOHANG)) > 0) {
+        while (($pid = POSIX::getInstance()->waitPID(-1, $status, POSIX::WNOHANG)) > 0) {
             if (isset($this->children[$pid])) {
                 unset($this->children[$pid]);
             }
@@ -137,7 +129,7 @@ class Manager
     {
         $this->executions++;
 
-        $pid = pcntl_fork();
+        $pid = POSIX::getInstance()->fork();
 
         if (-1 === $pid) {
             // Error fork
@@ -154,7 +146,7 @@ class Manager
 
         // Child code
         $process
-            ->setPID(getmypid())
+            ->setPID(POSIX::getInstance()->getMyPID())
             ->run();
     }
 
@@ -173,7 +165,7 @@ class Manager
      */
     public function dispatch()
     {
-        $this->signals->dispatch();
+        POSIX::getInstance()->dispatchSignals();
         usleep(100000);
     }
 

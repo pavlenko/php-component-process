@@ -12,11 +12,6 @@ class Process
     private $callable;
 
     /**
-     * @var Signals
-     */
-    private $signals;
-
-    /**
      * @var int
      */
     private $pid = 0;
@@ -24,7 +19,7 @@ class Process
     /**
      * @var string
      */
-    private $alias;
+    private $alias = '';
 
     /**
      * @param callable $callable
@@ -32,21 +27,22 @@ class Process
     public function __construct(callable $callable)
     {
         $this->callable = $callable;
-        $this->signals  = new Signals();
     }
 
     /**
-     * @inheritDoc
+     * @return int
      */
-    public function getPID()
+    public function getPID(): int
     {
         return $this->pid;
     }
 
     /**
-     * @inheritDoc
+     * @param int $pid
+     *
+     * @return static
      */
-    public function setPID($pid)
+    public function setPID(int $pid)
     {
         $this->pid = $pid;
         return $this;
@@ -55,7 +51,7 @@ class Process
     /**
      * @return string
      */
-    public function getAlias()
+    public function getAlias(): string
     {
         return $this->alias;
     }
@@ -63,9 +59,9 @@ class Process
     /**
      * @param string $alias
      *
-     * @return self
+     * @return static
      */
-    public function setAlias($alias)
+    public function setAlias(string $alias)
     {
         $this->alias = $alias;
         return $this;
@@ -81,11 +77,13 @@ class Process
     }
 
     /**
-     * @inheritDoc
+     * @param int $signal
+     *
+     * @return static
      */
-    public function kill($signal = SIGTERM)
+    public function kill(int $signal = POSIX::SIGTERM)
     {
-        posix_kill($this->pid, $signal);
+        POSIX::getInstance()->kill($this->pid, $signal);
         return $this;
     }
 }

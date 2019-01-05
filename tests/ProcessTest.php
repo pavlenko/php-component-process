@@ -2,14 +2,13 @@
 
 namespace PETest\Component\Process;
 
+use PE\Component\Process\POSIX;
 use PE\Component\Process\Process;
-use phpmock\phpunit\PHPMock;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 class ProcessTest extends TestCase
 {
-    use PHPMock;
-
     /**
      * @runInSeparateProcess
      */
@@ -17,13 +16,18 @@ class ProcessTest extends TestCase
     {
         $pid = 1000;
 
-        $this->getFunctionMock('PE\\Component\\Process', 'posix_kill')
+        /* @var $posix POSIX|MockObject */
+        $posix = $this->createMock(POSIX::class);
+        $posix
             ->expects(static::once())
-            ->with(static::equalTo($pid), static::equalTo(SIGTERM));
+            ->method('kill')
+            ->with(static::equalTo($pid), static::equalTo(POSIX::SIGTERM));
+
+        POSIX::setInstance($posix);
 
         $process = new Process(function () {});
         $process->setPID($pid);
-        $process->kill(SIGTERM);
+        $process->kill(POSIX::SIGTERM);
     }
 
     /**
