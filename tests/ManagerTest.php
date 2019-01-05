@@ -187,4 +187,42 @@ class ManagerTest extends TestCase
         static::assertTrue($manager->isShouldTerminate());
         static::assertNotEmpty($manager->getTerminateReason());
     }
+
+    public function testShouldTerminateBySignal()
+    {
+        /* @var $posix POSIX|MockObject */
+        $posix = $this->getMockBuilder(POSIX::class)
+            ->disableOriginalConstructor()
+            ->setMethods(['fork', 'kill', 'signalRegister', 'signalDispatch', 'waitPID'])
+            ->getMock();
+
+        $posix->expects(static::once())->method('fork')->willReturn(1000);
+
+        $posix->expects(static::atLeastOnce())->method('signalRegister')->willReturnCallback(function ($signal, $callable) {
+            $callable($signal);
+            return true;
+        });
+
+        $callable = function ($pid, $signal) {
+            $this->getQueue()->enqueue($signal);
+            return true;
+        };
+
+        $callable = \Closure::bind($callable, $posix, POSIX::class);
+
+        $posix->expects(static::atLeastOnce())->method('kill')->willReturnCallback($callable);
+        $posix->expects(static::atLeastOnce())->method('waitPID')->willReturnCallback(function () { return 0; });
+
+        POSIX::setInstance($posix);
+
+        $manager = new Manager();
+        $manager->fork(new Process(function(){}));
+
+        $posix->kill(0, POSIX::SIGINT);
+
+        $manager->dispatch();
+
+        static::assertTrue($manager->isShouldTerminate());
+        static::assertNotEmpty($manager->getTerminateReason());
+    }
 }
