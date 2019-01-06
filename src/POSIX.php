@@ -109,6 +109,14 @@ class POSIX
     /**
      * @return int
      */
+    public function setAsSessionLeader(): int
+    {
+        return posix_setsid();
+    }
+
+    /**
+     * @return int
+     */
     public function getMyPID(): int
     {
         return posix_getpid();

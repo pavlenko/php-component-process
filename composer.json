@@ -13,7 +13,8 @@
         }
     ],
     "require": {
-        "php": ">=7.0"
+        "php": ">=7.0",
+        "psr/log": "^1.1"
     },
     "require-dev": {
         "misterion/ko-process": "^0.5.3",
