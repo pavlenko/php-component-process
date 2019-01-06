@@ -38,7 +38,7 @@ class Daemon
         $posix = POSIX::getInstance();
 
         if (is_file($this->pidFile)) {
-            $pid = file_get_contents($this->pidFile);
+            $pid = (int) file_get_contents($this->pidFile);
 
             if ($posix->kill($pid, 0)) {
                 $logger->warning("Server already running with PID: {$pid}");
