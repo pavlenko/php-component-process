@@ -136,8 +136,79 @@ class DaemonTest extends TestCase
         $daemon->stop($logger);
     }
 
-    public function testStart()
+    public function testStartAlreadyRunning()
     {
+        /* @var $logger LoggerInterface|MockObject */
+        $logger = $this->createMock(LoggerInterface::class);
 
+        $logger->expects(static::once())->method('info')->with(static::equalTo('Starting daemon...'));
+        $logger->expects(static::once())->method('warning')->with(static::stringStartsWith('Server already running with PID:'));
+
+        /* @var $posix POSIX|MockObject */
+        $posix = $this->createMock(POSIX::class);
+
+        $posix->expects(static::atLeastOnce())->method('kill')->willReturnCallback(function ($pid, $signal) {
+            return (int) $signal === 0;
+        });
+
+        POSIX::setInstance($posix);
+
+        file_put_contents($this->pidPath, 1000);
+
+        $daemon = new Daemon(function () {}, $this->pidPath);
+        $daemon->start($logger);
+    }
+
+    public function testCannotStartNotRunningWithPIDFileExists()
+    {
+        /* @var $logger LoggerInterface|MockObject */
+        $logger = $this->createMock(LoggerInterface::class);
+
+        $logger->expects(static::once())->method('info')->with(static::equalTo('Starting daemon...'));
+        $logger->expects(static::once())->method('warning')->with(static::stringStartsWith('Removing PID file for defunct server process'));
+        $logger->expects(static::once())->method('error')->with(static::equalTo('Unable to create child process'));
+
+        /* @var $posix POSIX|MockObject */
+        $posix = $this->createMock(POSIX::class);
+
+        $posix->expects(static::atLeastOnce())->method('kill')->willReturnCallback(function ($pid, $signal) {
+            return (int) $signal !== 0;
+        });
+
+        $posix->expects(static::atLeastOnce())->method('fork')->willReturn(-1);
+
+        POSIX::setInstance($posix);
+
+        file_put_contents($this->pidPath, 1000);
+
+        $daemon = new Daemon(function () {}, $this->pidPath);
+        $daemon->start($logger);
+    }
+
+    public function testStartChild()
+    {
+        /* @var $logger LoggerInterface|MockObject */
+        $logger = $this->createMock(LoggerInterface::class);
+
+        $logger->expects(static::once())->method('info')->with(static::equalTo('Starting daemon...'));
+
+        /* @var $posix POSIX|MockObject */
+        $posix = $this->createMock(POSIX::class);
+
+        $posix->expects(static::atLeastOnce())->method('fork')->willReturnCallback(function(){
+            file_put_contents($this->pidPath, 1000);
+            return 0;
+        });
+        $posix->expects(static::once())->method('setAsSessionLeader');
+
+        POSIX::setInstance($posix);
+
+        $executed = false;
+        $callable = function () use (&$executed) { $executed = true; };
+
+        $daemon = new Daemon($callable, $this->pidPath);
+        $daemon->start($logger);
+
+        static::assertTrue($executed);
     }
 }

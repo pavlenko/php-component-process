@@ -49,17 +49,19 @@ class Daemon
             unlink($this->pidFile);
         }
 
+        // @codeCoverageIgnoreStart
         if (!($fh = fopen($this->pidFile, 'wb'))) {
             $logger->error("Unable to open PID file {$this->pidFile} for writing...");
             return;
         }
+        // @codeCoverageIgnoreEnd
 
         $pid = $posix->fork();
 
         if (-1 === $pid) {
             // Cannot create child
             $logger->error('Unable to create child process');
-            exit(1);
+            return;
         }
 
         if ($pid) {
@@ -71,7 +73,7 @@ class Daemon
             // Child thread
             $posix->setAsSessionLeader();
             call_user_func($this->callable);
-            unlink($this->pidFile);
+            @unlink($this->pidFile);
         }
     }
 
