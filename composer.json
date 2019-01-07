@@ -17,10 +17,13 @@
         "psr/log": "^1.1"
     },
     "require-dev": {
-        "misterion/ko-process": "^0.5.3",
         "phpunit/phpunit": "~6.0"
     },
-    "suggest": {},
+    "suggest": {
+        "ext-proctitle": "*",
+        "ext-pcntl": "*",
+        "ext-posix": "*"
+    },
     "autoload": {
         "psr-4": {
             "PE\\Component\\Process\\": "src/"
