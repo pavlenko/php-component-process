@@ -24,12 +24,6 @@ namespace PE\Component\Process;
 // Instantiate manager
 $manager = new Manager();
 
-// Optionally set max lifetime in seconds, after which manager ignore fork calls
-$manager->setMaxLifeTime(60);
-
-// Optionally set max executed processes, after which manager ignore fork calls
-$manager->setMaxExecutedProcesses(3);
-
 // Create process
 $process = new Process(function (Process $process) {
     //TODO do some stuff...
