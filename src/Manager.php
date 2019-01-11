@@ -16,31 +16,6 @@ class Manager
      */
     private $shouldTerminate = false;
 
-    /**
-     * @var int
-     */
-    private $maxLifeTime = 0;
-
-    /**
-     * @var float
-     */
-    private $startTime;
-
-    /**
-     * @var int
-     */
-    private $maxExecutedProcesses = 0;
-
-    /**
-     * @var int
-     */
-    private $executions = 0;
-
-    /**
-     * @var string
-     */
-    private $terminateReason = '';
-
     public function __construct()
     {
         $posix = POSIX::getInstance();
@@ -50,46 +25,11 @@ class Manager
     }
 
     /**
-     * @param int $maxLifeTime
-     */
-    public function setMaxLifeTime($maxLifeTime)
-    {
-        $this->maxLifeTime = (int) $maxLifeTime;
-    }
-
-    /**
-     * @param int $maxExecutedProcesses
-     */
-    public function setMaxExecutedProcesses($maxExecutedProcesses)
-    {
-        $this->maxExecutedProcesses = (int) $maxExecutedProcesses;
-    }
-
-    /**
-     * @return string
-     */
-    public function getTerminateReason(): string
-    {
-        return $this->terminateReason;
-    }
-
-    /**
      * @return bool
      */
     public function isShouldTerminate(): bool
     {
         if ($this->shouldTerminate) {
-            $this->terminateReason = 'Signal';
-            return true;
-        }
-
-        if ($this->maxLifeTime > 0 && $this->maxLifeTime < microtime(true) - $this->startTime) {
-            $this->terminateReason = 'Lifetime';
-            return true;
-        }
-
-        if ($this->maxExecutedProcesses > 0 && $this->maxExecutedProcesses <= $this->executions) {
-            $this->terminateReason = 'Executions count';
             return true;
         }
 
@@ -127,8 +67,6 @@ class Manager
      */
     public function fork(Process $process)
     {
-        $this->executions++;
-
         $pid = POSIX::getInstance()->fork();
 
         if (-1 === $pid) {

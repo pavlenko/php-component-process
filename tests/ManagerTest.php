@@ -141,54 +141,7 @@ class ManagerTest extends TestCase
         static::assertEquals(1, $manager->countChildren('foo'));
     }
 
-    public function testGetTerminateReasonWithoutExecution()
-    {
-        /* @var $posix POSIX|MockObject */
-        $posix = $this->createMock(POSIX::class);
-
-        POSIX::setInstance($posix);
-
-        $manager = new Manager();
-
-        static::assertFalse($manager->isShouldTerminate());
-        static::assertEmpty($manager->getTerminateReason());
-    }
-
-    public function testShouldTerminateByExecutions()
-    {
-        /* @var $posix POSIX|MockObject */
-        $posix = $this->createMock(POSIX::class);
-        $posix->expects(static::once())->method('fork')->willReturn(1000);
-
-        POSIX::setInstance($posix);
-
-        $manager = new Manager();
-        $manager->setMaxExecutedProcesses(1);
-        $manager->fork(new Process(function(){}));
-
-        static::assertTrue($manager->isShouldTerminate());
-        static::assertNotEmpty($manager->getTerminateReason());
-    }
-
-    public function testShouldTerminateByTime()
-    {
-        /* @var $posix POSIX|MockObject */
-        $posix = $this->createMock(POSIX::class);
-        $posix->expects(static::once())->method('fork')->willReturn(1000);
-
-        POSIX::setInstance($posix);
-
-        $manager = new Manager();
-        $manager->setMaxLifeTime(1);
-        $manager->fork(new Process(function(){}));
-
-        sleep(2);
-
-        static::assertTrue($manager->isShouldTerminate());
-        static::assertNotEmpty($manager->getTerminateReason());
-    }
-
-    public function testShouldTerminateBySignal()
+    public function testShouldTerminate()
     {
         /* @var $posix POSIX|MockObject */
         $posix = $this->getMockBuilder(POSIX::class)
@@ -218,11 +171,12 @@ class ManagerTest extends TestCase
         $manager = new Manager();
         $manager->fork(new Process(function(){}));
 
+        static::assertFalse($manager->isShouldTerminate());
+
         $posix->kill(0, POSIX::SIGINT);
 
         $manager->dispatch();
 
         static::assertTrue($manager->isShouldTerminate());
-        static::assertNotEmpty($manager->getTerminateReason());
     }
 }
